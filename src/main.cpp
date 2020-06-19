@@ -9,7 +9,7 @@ const char* password = WIFI_PASSWORD;
 const char* remote_host = PING_HOST;
 
 const int RED_LED = D0;
-const int BLUE_LED = D4;
+//const int BLUE_LED = D4;
 
 bool last_ping = false;
 
@@ -18,7 +18,7 @@ void setup() {
     delay(10);
 
     pinMode(RED_LED, OUTPUT);
-    pinMode(BLUE_LED, OUTPUT);
+//    pinMode(BLUE_LED, OUTPUT);
 
     Serial.println();
     Serial.println("Connecting");
@@ -50,7 +50,7 @@ void loop() {
             Serial.print(".");
         }
         last_ping = true;
-        digitalWrite(BLUE_LED, LOW);
+//        digitalWrite(BLUE_LED, LOW);
         digitalWrite(RED_LED, HIGH);
     } else {
         if(last_ping == true) {
@@ -60,8 +60,15 @@ void loop() {
             Serial.print(".");
         }
         last_ping = false;
-        digitalWrite(BLUE_LED, HIGH);
-        digitalWrite(RED_LED, LOW);
+//        digitalWrite(BLUE_LED, HIGH);
+        for(int c = 0; c < 3; c++) {
+            digitalWrite(RED_LED, LOW);
+            delay(100);
+            digitalWrite(RED_LED, HIGH);
+            delay(100);
+            digitalWrite(RED_LED, LOW);
+            delay(100);
+        }
     }
     delay(500);
 }
