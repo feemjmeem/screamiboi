@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
-#include <ESP8266Ping.h>
+#include <AsyncPing.h>
+#include <Ticker.h>
 #include "wificonfig.h"
 
 const char* ssid = WIFI_SSID;
@@ -9,19 +10,23 @@ const char* password = WIFI_PASSWORD;
 const char* remote_host = PING_HOST;
 
 const int RED_LED = D0;
-//const int BLUE_LED = D4;
 
 bool last_ping = false;
+
+Ticker timer;
+AsyncPing ping;
+
+void pingu() {
+    ping.begin(remote_host);
+}
 
 void setup() {
     Serial.begin(115200);
     delay(10);
 
     pinMode(RED_LED, OUTPUT);
-//    pinMode(BLUE_LED, OUTPUT);
 
-    Serial.println();
-    Serial.println("Connecting");
+    Serial.printf("\nConnecting...");
 
     WiFi.begin(ssid, password);
 
@@ -29,46 +34,35 @@ void setup() {
         delay(100);
         Serial.print(".");
     }
+    
+    Serial.printf("Connected!\nscreamiboi is %s. ALL SHALL LOVE ME AND DESPAIR!\n",
+                  WiFi.localIP().toString().c_str());
+    Serial.printf("Pinging host %s...", remote_host);
 
-    Serial.println("Connected!");
-    Serial.println();
-    Serial.print("screamiboi is ");
-    Serial.print(WiFi.localIP());
-    Serial.println(". ALL SHALL LOVE ME AND DESPAIR!");
-
-    Serial.print("Pinging host ");
-    Serial.print(remote_host);
-    Serial.println("...");
+    ping.on(true,[](const AsyncPingResponse& response){
+        IPAddress addr(response.addr);
+        if (response.answer) {
+            if (last_ping == false) {
+                Serial.printf("\nConnected! Monitoring %s...", remote_host);
+            } else {
+                Serial.printf(".");
+            }
+            last_ping = true;
+            digitalWrite(RED_LED, HIGH);
+        } else {
+            if (last_ping == true) {
+                Serial.printf("\nConnection lost! Waiting for recovery...");
+            } else {
+                Serial.printf(".");
+            }
+            last_ping = false;
+            digitalWrite(RED_LED, LOW);
+        }
+        return false;
+    });
+    pingu();
+    timer.attach(PING_DELAY,pingu);
 }
 
 void loop() {
-    if(Ping.ping(remote_host)) {
-        if(last_ping != true) {
-            Serial.println("Connected!");
-            Serial.print("Monitoring connection");
-        } else {
-            Serial.print(".");
-        }
-        last_ping = true;
-//        digitalWrite(BLUE_LED, LOW);
-        digitalWrite(RED_LED, HIGH);
-    } else {
-        if(last_ping == true) {
-            Serial.println("Connection lost!");
-            Serial.print("Waiting for recovery");
-        } else {
-            Serial.print(".");
-        }
-        last_ping = false;
-//        digitalWrite(BLUE_LED, HIGH);
-        for(int c = 0; c < 3; c++) {
-            digitalWrite(RED_LED, LOW);
-            delay(100);
-            digitalWrite(RED_LED, HIGH);
-            delay(100);
-            digitalWrite(RED_LED, LOW);
-            delay(100);
-        }
-    }
-    delay(500);
 }
