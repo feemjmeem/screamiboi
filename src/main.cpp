@@ -4,20 +4,54 @@
 #include <Ticker.h>
 #include "wificonfig.h"
 
-const char* ssid = WIFI_SSID;
-const char* password = WIFI_PASSWORD;
+const char *ssid = WIFI_SSID;
+const char *password = WIFI_PASSWORD;
 
-const char* remote_host = PING_HOST;
+const char *hosts[3] = {PING_HOSTS};
 
 const int RED_LED = D0;
 
-bool last_ping = false;
+bool last_ping[3] = { true, true, true };
+bool net_fail = false;
+
+int win_count = 0;
 
 Ticker timer;
-AsyncPing ping;
+AsyncPing pings[3];
+IPAddress addrs[3];
 
 void pingu() {
-    ping.begin(remote_host);
+    bool allFalse = false;
+    for (int i = 0; i < 3; i++) {
+        if (last_ping[i]) {
+            allFalse = false;
+            if (win_count > 32766) {
+                win_count = 3;
+            } else {
+                win_count++;
+            }
+            break;
+        } else {
+            allFalse = true;
+            win_count = 0;
+        }
+    }
+    if (allFalse) {
+        if ( !net_fail ) {
+            Serial.printf("\nConnection down! Monitoring...");
+            digitalWrite(RED_LED, LOW);
+            net_fail = true;
+        }
+    } else {
+        if ( net_fail && win_count >= 3) {
+            Serial.printf("\nConnection up! Monitoring...");
+            digitalWrite(RED_LED, HIGH);
+            net_fail = false;
+        }
+    }
+    for (int i = 0; i < 3; i++) {
+        pings[i].begin(hosts[i], 1);
+    }
 }
 
 void setup() {
@@ -34,35 +68,31 @@ void setup() {
         delay(100);
         Serial.print(".");
     }
-    
+
     Serial.printf("Connected!\nscreamiboi is %s. ALL SHALL LOVE ME AND DESPAIR!\n",
                   WiFi.localIP().toString().c_str());
-    Serial.printf("Pinging host %s...", remote_host);
+    Serial.printf("Pinging hosts...");
+    digitalWrite(RED_LED, HIGH);
 
-    ping.on(true,[](const AsyncPingResponse& response){
-        IPAddress addr(response.addr);
-        if (response.answer) {
-            if (last_ping == false) {
-                Serial.printf("\nConnected! Monitoring %s...", remote_host);
-            } else {
-                Serial.printf(".");
-            }
-            last_ping = true;
-            digitalWrite(RED_LED, HIGH);
-        } else {
-            if (last_ping == true) {
-                Serial.printf("\nConnection lost! Waiting for recovery...");
-            } else {
-                Serial.printf(".");
-            }
-            last_ping = false;
-            digitalWrite(RED_LED, LOW);
+    for (int i = 0; i < 3; i++) {
+        if (hosts[i]) {
+            if (!WiFi.hostByName(hosts[i], addrs[i]))
+                addrs[i].fromString(hosts[i]);
         }
-        return false;
-    });
-    pingu();
-    timer.attach(PING_DELAY,pingu);
+        pings[i].on(true, [i](const AsyncPingResponse& response) {
+            if (response.answer) {
+                Serial.printf("!");
+                last_ping[i] = true;
+            } else {
+                Serial.printf(".");
+                last_ping[i] = false;
+            }
+            return false;
+        });
+
+        pingu();
+        timer.attach(PING_DELAY, pingu);
+    }
 }
 
-void loop() {
-}
+void loop() {}
