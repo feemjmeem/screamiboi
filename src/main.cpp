@@ -9,7 +9,7 @@ const char *password = WIFI_PASSWORD;
 
 const char *hosts[3] = {PING_HOSTS};
 
-const int RED_LED = D0;
+const int RED_LED = D7; // add an external led
 
 bool last_ping[3] = { true, true, true };
 bool net_fail = false;
@@ -39,13 +39,13 @@ void pingu() {
     if (allFalse) {
         if ( !net_fail ) {
             Serial.printf("\nConnection down! Monitoring...");
-            digitalWrite(RED_LED, LOW);
+            digitalWrite(RED_LED, HIGH);
             net_fail = true;
         }
     } else {
         if ( net_fail && win_count >= 3) {
             Serial.printf("\nConnection up! Monitoring...");
-            digitalWrite(RED_LED, HIGH);
+            digitalWrite(RED_LED, LOW);
             net_fail = false;
         }
     }
@@ -59,6 +59,7 @@ void setup() {
     delay(10);
 
     pinMode(RED_LED, OUTPUT);
+    digitalWrite(RED_LED, HIGH);
 
     Serial.printf("\nConnecting...");
 
@@ -72,7 +73,7 @@ void setup() {
     Serial.printf("Connected!\nscreamiboi is %s. ALL SHALL LOVE ME AND DESPAIR!\n",
                   WiFi.localIP().toString().c_str());
     Serial.printf("Pinging hosts...");
-    digitalWrite(RED_LED, HIGH);
+    digitalWrite(RED_LED, LOW);
 
     for (int i = 0; i < 3; i++) {
         if (hosts[i]) {
