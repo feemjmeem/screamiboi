@@ -15,6 +15,7 @@ bool last_ping[3] = { true, true, true };
 bool net_fail = false;
 
 int win_count = 0;
+int lose_count = 0;
 
 Ticker timer;
 AsyncPing pings[3];
@@ -25,6 +26,7 @@ void pingu() {
     for (int i = 0; i < 3; i++) {
         if (last_ping[i]) {
             allFalse = false;
+            lose_count = 0;
             if (win_count > 32766) {
                 win_count = 3;
             } else {
@@ -34,10 +36,15 @@ void pingu() {
         } else {
             allFalse = true;
             win_count = 0;
+            if (lose_count > 32766) {
+                lose_count = 9;
+            } else {
+                lose_count++;
+            }
         }
     }
     if (allFalse) {
-        if ( !net_fail ) {
+        if ( !net_fail && lose_count >= 9) {
             Serial.printf("\nConnection down! Monitoring...");
             digitalWrite(RED_LED, HIGH);
             net_fail = true;
