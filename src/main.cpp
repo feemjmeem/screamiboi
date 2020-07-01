@@ -10,6 +10,10 @@ const char *password = WIFI_PASSWORD;
 const char *hosts[3] = {PING_HOSTS};
 
 const int RED_LED = D7; // add an external led
+const int YELLOW_LED = D8;
+const int LEDS[4] = { D0, D4, D7, D8 };
+const int LEDS_OFF[2] = { D0, D4 };
+
 
 bool last_ping[3] = { true, true, true };
 bool net_fail = false;
@@ -37,23 +41,34 @@ void pingu() {
             allFalse = true;
             win_count = 0;
             if (lose_count > 32766) {
-                lose_count = 9;
+                lose_count = 18;
             } else {
                 lose_count++;
             }
         }
     }
-    if (allFalse) {
-        if ( !net_fail && lose_count >= 9) {
-            Serial.printf("\nConnection down! Monitoring...");
-            digitalWrite(RED_LED, HIGH);
-            net_fail = true;
-        }
-    } else {
-        if ( net_fail && win_count >= 3) {
+
+    if ( net_fail ) {
+        if ( win_count >= 3 ) {
             Serial.printf("\nConnection up! Monitoring...");
             digitalWrite(RED_LED, LOW);
+            digitalWrite(YELLOW_LED, LOW);
             net_fail = false;
+        }
+    } else {
+        if ( lose_count ) {
+            if (allFalse) {
+                if ( lose_count >= 18) {
+                    Serial.printf("\nConnection down! Monitoring...");
+                    digitalWrite(YELLOW_LED, LOW);
+                    digitalWrite(RED_LED, HIGH);
+                    net_fail = true;
+                } else {
+                    digitalWrite(YELLOW_LED, HIGH);
+                }
+            }
+        } else {
+            digitalWrite(YELLOW_LED, LOW);
         }
     }
     for (int i = 0; i < 3; i++) {
@@ -65,8 +80,10 @@ void setup() {
     Serial.begin(115200);
     delay(10);
 
-    pinMode(RED_LED, OUTPUT);
-    digitalWrite(RED_LED, HIGH);
+    for (int i: LEDS) {
+        pinMode(i, OUTPUT);
+        digitalWrite(i, HIGH);
+    }
 
     Serial.printf("\nConnecting...");
 
@@ -81,6 +98,7 @@ void setup() {
                   WiFi.localIP().toString().c_str());
     Serial.printf("Pinging hosts...");
     digitalWrite(RED_LED, LOW);
+    digitalWrite(YELLOW_LED, LOW);
 
     for (int i = 0; i < 3; i++) {
         if (hosts[i]) {
